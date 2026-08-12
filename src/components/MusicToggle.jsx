@@ -16,76 +16,95 @@ export default function MusicToggle() {
   const [available, setAvailable] = useState(true);
   const [playing, setPlaying] = useState(false);
   const [srcIndex, setSrcIndex] = useState(0);
-  const hasSeekedRef = useRef(false);
-
-  const playAudio = () => {
-    const audio = audioRef.current;
-    if (!audio) return Promise.resolve(false);
-
-    if (!hasSeekedRef.current || audio.currentTime < START_TIME_SECONDS) {
-      try {
-        audio.currentTime = START_TIME_SECONDS;
-      } catch {
-        // ignore if metadata not loaded yet
-      }
-      hasSeekedRef.current = true;
-    }
-
-    return audio.play()
-      .then(() => {
-        setPlaying(true);
-        return true;
-      })
-      .catch(() => {
-        return false;
-      });
-  };
 
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    function handleError() {
+    let seeked = false;
+
+    const setInitialTime = () => {
+      if (!seeked && audio.duration >= START_TIME_SECONDS) {
+        try {
+          audio.currentTime = START_TIME_SECONDS;
+          seeked = true;
+        } catch (e) {
+          // ignore
+        }
+      }
+    };
+
+    const handlePlay = () => setPlaying(true);
+    const handlePause = () => setPlaying(false);
+    const handleError = () => {
       if (srcIndex < AUDIO_SOURCES.length - 1) {
         setSrcIndex((prev) => prev + 1);
-        hasSeekedRef.current = false;
+        seeked = false;
       } else {
         setAvailable(false);
       }
+    };
+
+    audio.addEventListener("loadedmetadata", setInitialTime);
+    audio.addEventListener("canplay", setInitialTime);
+    audio.addEventListener("play", handlePlay);
+    audio.addEventListener("pause", handlePause);
+    audio.addEventListener("error", handleError);
+
+    if (audio.readyState >= 1) {
+      setInitialTime();
     }
 
-    audio.addEventListener("error", handleError);
-    return () => audio.removeEventListener("error", handleError);
+    return () => {
+      audio.removeEventListener("loadedmetadata", setInitialTime);
+      audio.removeEventListener("canplay", setInitialTime);
+      audio.removeEventListener("play", handlePlay);
+      audio.removeEventListener("pause", handlePause);
+      audio.removeEventListener("error", handleError);
+    };
   }, [srcIndex]);
 
   useEffect(() => {
-    if (!available) return;
+    const audio = audioRef.current;
+    if (!audio || !available) return;
 
-    let started = false;
+    let isSubscribed = true;
 
-    const handleStart = () => {
-      if (started) return;
-      playAudio().then((success) => {
-        if (success) {
-          started = true;
+    const tryPlay = () => {
+      if (!audio) return;
+      if (audio.currentTime < START_TIME_SECONDS) {
+        try {
+          audio.currentTime = START_TIME_SECONDS;
+        } catch {
+          // ignore
+        }
+      }
+      audio.play().then(() => {
+        if (isSubscribed) {
           removeListeners();
         }
+      }).catch(() => {
+        // Autoplay blocked by browser policy; user interaction listener remains active
       });
+    };
+
+    const handleUserInteraction = () => {
+      tryPlay();
     };
 
     const events = ["click", "touchstart", "pointerdown", "keydown"];
     const addListeners = () => {
-      events.forEach((evt) => window.addEventListener(evt, handleStart, { once: true }));
+      events.forEach((evt) => window.addEventListener(evt, handleUserInteraction));
     };
     const removeListeners = () => {
-      events.forEach((evt) => window.removeEventListener(evt, handleStart));
+      events.forEach((evt) => window.removeEventListener(evt, handleUserInteraction));
     };
 
-    // Attempt immediate autoplay on mount
-    handleStart();
+    tryPlay();
     addListeners();
 
     return () => {
+      isSubscribed = false;
       removeListeners();
     };
   }, [available, srcIndex]);
@@ -96,9 +115,15 @@ export default function MusicToggle() {
 
     if (playing) {
       audio.pause();
-      setPlaying(false);
     } else {
-      playAudio();
+      if (audio.currentTime < START_TIME_SECONDS) {
+        try {
+          audio.currentTime = START_TIME_SECONDS;
+        } catch {
+          // ignore
+        }
+      }
+      audio.play().catch(() => {});
     }
   }
 
