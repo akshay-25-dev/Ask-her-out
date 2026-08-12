@@ -1,0 +1,26 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply font-body text-ink;
+  }
+
+  *:focus-visible {
+    outline: 3px solid #4a154b;
+    outline-offset: 2px;
+  }
+}
+
+/* Respect reduced-motion preferences: stop the floating hearts and pop
+   animations for anyone who has asked their OS to minimize motion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
