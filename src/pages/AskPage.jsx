@@ -4,7 +4,6 @@ import { usePlan } from "../hooks/usePlan.js";
 import DodgeButton from "../components/DodgeButton.jsx";
 import GifCard from "../components/GifCard.jsx";
 import FloatingHearts from "../components/FloatingHearts.jsx";
-import MusicToggle from "../components/MusicToggle.jsx";
 
 const MAX_GROWTH_SCALE = 1.9;
 const GROWTH_STEP = 0.12;
@@ -23,7 +22,6 @@ export default function AskPage() {
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-gradient-to-b from-blush to-peach px-6 py-16">
       <FloatingHearts />
-      <MusicToggle />
 
       <div className="relative z-[1] flex max-w-lg flex-col items-center text-center">
         <h1 className="font-display text-4xl font-semibold leading-tight text-ink sm:text-5xl">

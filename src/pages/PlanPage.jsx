@@ -1,7 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { usePlan } from "../hooks/usePlan.js";
 import FloatingHearts from "../components/FloatingHearts.jsx";
-import MusicToggle from "../components/MusicToggle.jsx";
 
 const DAYS = ["Tomorrow", "This weekend", "Next week", "Surprise me"];
 const PLACES = ["Coffee ☕", "Dinner 🍝", "A movie 🎬", "A walk 🌇", "Surprise me"];
@@ -41,7 +40,6 @@ export default function PlanPage() {
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-gradient-to-b from-blush to-peach px-6 py-16">
       <FloatingHearts />
-      <MusicToggle />
 
       <div className="relative z-[1] flex w-full max-w-md flex-col items-center gap-8 text-center">
         <div>

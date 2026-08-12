@@ -4,7 +4,6 @@ import confetti from "canvas-confetti";
 import { usePlan } from "../hooks/usePlan.js";
 import GifCard from "../components/GifCard.jsx";
 import FloatingHearts from "../components/FloatingHearts.jsx";
-import MusicToggle from "../components/MusicToggle.jsx";
 
 function fireConfetti() {
   const colors = ["#FF6B9D", "#FFC857", "#FFD6A5", "#4A154B"];
@@ -57,7 +56,6 @@ export default function CelebratePage() {
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-gradient-to-b from-blush to-peach px-6 py-16">
       <FloatingHearts />
-      <MusicToggle />
 
       <div className="relative z-[1] flex max-w-md flex-col items-center gap-8 text-center">
         <h1 className="font-display text-4xl font-bold text-ink sm:text-5xl">

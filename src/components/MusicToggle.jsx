@@ -5,18 +5,18 @@ const AUDIO_SOURCES = [
   "/music.mp3"
 ];
 
+const START_TIME_SECONDS = 16;
+
 /**
- * Background music toggle. Starts paused (browsers block autoplay-with-sound
- * anyway, so there's no point fighting that) and lets the visitor opt in.
- *
- * Checks configured audio sources (`public/Love Me Like You Do.mp3` or `public/music.mp3`)
- * and hides itself entirely if missing.
+ * Persistent background music toggle. Starts paused and lets the visitor opt in.
+ * When played, starts from 16 seconds into the song.
  */
 export default function MusicToggle() {
   const audioRef = useRef(null);
   const [available, setAvailable] = useState(true);
   const [playing, setPlaying] = useState(false);
   const [srcIndex, setSrcIndex] = useState(0);
+  const hasSeekedRef = useRef(false);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -25,6 +25,7 @@ export default function MusicToggle() {
     function handleError() {
       if (srcIndex < AUDIO_SOURCES.length - 1) {
         setSrcIndex((prev) => prev + 1);
+        hasSeekedRef.current = false;
       } else {
         setAvailable(false);
       }
@@ -42,14 +43,24 @@ export default function MusicToggle() {
       audio.pause();
       setPlaying(false);
     } else {
-      audio.play().catch(() => {
+      if (!hasSeekedRef.current || audio.currentTime < START_TIME_SECONDS) {
+        try {
+          audio.currentTime = START_TIME_SECONDS;
+        } catch {
+          // ignore if metadata not loaded yet
+        }
+        hasSeekedRef.current = true;
+      }
+      audio.play().then(() => {
+        setPlaying(true);
+      }).catch(() => {
         if (srcIndex < AUDIO_SOURCES.length - 1) {
           setSrcIndex((prev) => prev + 1);
+          hasSeekedRef.current = false;
         } else {
           setAvailable(false);
         }
       });
-      setPlaying(true);
     }
   }
 
@@ -57,12 +68,12 @@ export default function MusicToggle() {
 
   return (
     <>
-      <audio ref={audioRef} src={AUDIO_SOURCES[srcIndex]} loop preload="none" />
+      <audio ref={audioRef} src={AUDIO_SOURCES[srcIndex]} loop preload="metadata" />
       <button
         type="button"
         onClick={toggle}
         aria-label={playing ? "Pause background music" : "Play background music"}
-        className="fixed bottom-5 right-5 z-20 flex h-12 w-12 items-center justify-center rounded-full bg-white/90 text-ink shadow-lg backdrop-blur transition-transform hover:scale-110"
+        className="fixed bottom-5 right-5 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-white/90 text-ink shadow-lg backdrop-blur transition-transform hover:scale-110"
       >
         {playing ? "🔊" : "🔈"}
       </button>
