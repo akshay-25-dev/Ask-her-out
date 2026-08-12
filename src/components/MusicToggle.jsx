@@ -1,29 +1,38 @@
 import { useEffect, useRef, useState } from "react";
 
+const AUDIO_SOURCES = [
+  "/Love Me Like You Do.mp3",
+  "/music.mp3"
+];
+
 /**
  * Background music toggle. Starts paused (browsers block autoplay-with-sound
  * anyway, so there's no point fighting that) and lets the visitor opt in.
  *
- * If you want music, drop an mp3 at `public/music.mp3` — this component
- * checks whether that file actually loads and hides itself entirely if it's
- * missing, rather than showing a button that does nothing.
+ * Checks configured audio sources (`public/Love Me Like You Do.mp3` or `public/music.mp3`)
+ * and hides itself entirely if missing.
  */
 export default function MusicToggle() {
   const audioRef = useRef(null);
   const [available, setAvailable] = useState(true);
   const [playing, setPlaying] = useState(false);
+  const [srcIndex, setSrcIndex] = useState(0);
 
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
     function handleError() {
-      setAvailable(false);
+      if (srcIndex < AUDIO_SOURCES.length - 1) {
+        setSrcIndex((prev) => prev + 1);
+      } else {
+        setAvailable(false);
+      }
     }
 
     audio.addEventListener("error", handleError);
     return () => audio.removeEventListener("error", handleError);
-  }, []);
+  }, [srcIndex]);
 
   function toggle() {
     const audio = audioRef.current;
@@ -33,7 +42,13 @@ export default function MusicToggle() {
       audio.pause();
       setPlaying(false);
     } else {
-      audio.play().catch(() => setAvailable(false));
+      audio.play().catch(() => {
+        if (srcIndex < AUDIO_SOURCES.length - 1) {
+          setSrcIndex((prev) => prev + 1);
+        } else {
+          setAvailable(false);
+        }
+      });
       setPlaying(true);
     }
   }
@@ -42,7 +57,7 @@ export default function MusicToggle() {
 
   return (
     <>
-      <audio ref={audioRef} src="/music.mp3" loop preload="none" />
+      <audio ref={audioRef} src={AUDIO_SOURCES[srcIndex]} loop preload="none" />
       <button
         type="button"
         onClick={toggle}
