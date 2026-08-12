@@ -8,8 +8,8 @@ const AUDIO_SOURCES = [
 const START_TIME_SECONDS = 16;
 
 /**
- * Persistent background music toggle. Starts paused and lets the visitor opt in.
- * When played, starts from 16 seconds into the song.
+ * Persistent background music toggle. Plays automatically when the site opens
+ * (starting at 16s), or upon first user interaction if blocked by autoplay policy.
  */
 export default function MusicToggle() {
   const audioRef = useRef(null);
@@ -17,6 +17,29 @@ export default function MusicToggle() {
   const [playing, setPlaying] = useState(false);
   const [srcIndex, setSrcIndex] = useState(0);
   const hasSeekedRef = useRef(false);
+
+  const playAudio = () => {
+    const audio = audioRef.current;
+    if (!audio) return Promise.resolve(false);
+
+    if (!hasSeekedRef.current || audio.currentTime < START_TIME_SECONDS) {
+      try {
+        audio.currentTime = START_TIME_SECONDS;
+      } catch {
+        // ignore if metadata not loaded yet
+      }
+      hasSeekedRef.current = true;
+    }
+
+    return audio.play()
+      .then(() => {
+        setPlaying(true);
+        return true;
+      })
+      .catch(() => {
+        return false;
+      });
+  };
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -35,6 +58,38 @@ export default function MusicToggle() {
     return () => audio.removeEventListener("error", handleError);
   }, [srcIndex]);
 
+  useEffect(() => {
+    if (!available) return;
+
+    let started = false;
+
+    const handleStart = () => {
+      if (started) return;
+      playAudio().then((success) => {
+        if (success) {
+          started = true;
+          removeListeners();
+        }
+      });
+    };
+
+    const events = ["click", "touchstart", "pointerdown", "keydown"];
+    const addListeners = () => {
+      events.forEach((evt) => window.addEventListener(evt, handleStart, { once: true }));
+    };
+    const removeListeners = () => {
+      events.forEach((evt) => window.removeEventListener(evt, handleStart));
+    };
+
+    // Attempt immediate autoplay on mount
+    handleStart();
+    addListeners();
+
+    return () => {
+      removeListeners();
+    };
+  }, [available, srcIndex]);
+
   function toggle() {
     const audio = audioRef.current;
     if (!audio) return;
@@ -43,24 +98,7 @@ export default function MusicToggle() {
       audio.pause();
       setPlaying(false);
     } else {
-      if (!hasSeekedRef.current || audio.currentTime < START_TIME_SECONDS) {
-        try {
-          audio.currentTime = START_TIME_SECONDS;
-        } catch {
-          // ignore if metadata not loaded yet
-        }
-        hasSeekedRef.current = true;
-      }
-      audio.play().then(() => {
-        setPlaying(true);
-      }).catch(() => {
-        if (srcIndex < AUDIO_SOURCES.length - 1) {
-          setSrcIndex((prev) => prev + 1);
-          hasSeekedRef.current = false;
-        } else {
-          setAvailable(false);
-        }
-      });
+      playAudio();
     }
   }
 
@@ -68,7 +106,13 @@ export default function MusicToggle() {
 
   return (
     <>
-      <audio ref={audioRef} src={AUDIO_SOURCES[srcIndex]} loop preload="metadata" />
+      <audio
+        ref={audioRef}
+        src={AUDIO_SOURCES[srcIndex]}
+        loop
+        preload="auto"
+        autoPlay
+      />
       <button
         type="button"
         onClick={toggle}
