@@ -72,19 +72,29 @@ export default function MusicToggle() {
 
     const tryPlay = () => {
       if (!audio) return;
-      if (audio.currentTime < START_TIME_SECONDS) {
+      if (audio.readyState >= 1 && audio.currentTime < START_TIME_SECONDS) {
         try {
           audio.currentTime = START_TIME_SECONDS;
         } catch {
           // ignore
         }
       }
+
+      audio.muted = false;
       audio.play().then(() => {
         if (isSubscribed) {
           removeListeners();
         }
       }).catch(() => {
-        // Autoplay blocked by browser policy; user interaction listener remains active
+        // If unmuted autoplay blocked by browser policy, try muted autoplay + auto-unmute on first gesture
+        audio.muted = true;
+        audio.play().then(() => {
+          const unmuteOnInteraction = () => {
+            if (audio) audio.muted = false;
+            events.forEach((evt) => window.removeEventListener(evt, unmuteOnInteraction));
+          };
+          events.forEach((evt) => window.addEventListener(evt, unmuteOnInteraction, { once: true }));
+        }).catch(() => {});
       });
     };
 
@@ -116,13 +126,14 @@ export default function MusicToggle() {
     if (playing) {
       audio.pause();
     } else {
-      if (audio.currentTime < START_TIME_SECONDS) {
+      if (audio.readyState >= 1 && audio.currentTime < START_TIME_SECONDS) {
         try {
           audio.currentTime = START_TIME_SECONDS;
         } catch {
           // ignore
         }
       }
+      audio.muted = false;
       audio.play().catch(() => {});
     }
   }
@@ -137,6 +148,7 @@ export default function MusicToggle() {
         loop
         preload="auto"
         autoPlay
+        playsInline
       />
       <button
         type="button"
